@@ -1,0 +1,51 @@
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+.env.local
+.env.*.local
+*.pem
+*.key
+porkbun_creds.txt
+*_creds.txt
+*_credentials.json
+.mcp.env
+
+# Dependencies & Build artifacts
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# Python & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Archives & Tarballs
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+
+# Scratch, OpenCode, & Agent runtime logs
+.omo/
+*.log
+*.dump
+*.scratch
+tmp/
+temp/
+/tmp/
+
+# OS & Editor artifacts
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

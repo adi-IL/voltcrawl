@@ -1,0 +1,25 @@
+# Test suites and development configs
+tests/
+.github/
+.agents/
+scripts/
+tsconfig.json
+bun.lock
+
+# Environment & Secrets
+.env
+.env.*
+*.pem
+*.key
+porkbun_creds.txt
+*.log
+
+# Scratch & Caches
+.omo/
+.pytest_cache/
+.mypy_cache/
+__pycache__/
+*.tsbuildinfo
+tmp/
+temp/
+assets/
