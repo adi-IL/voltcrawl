@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <mask id="bolt-mask-light">
+    <rect width="512" height="512" fill="#ffffff"/>
+    <polygon points="280,48 184,275 248,275 232,464 328,237 264,237" fill="#000000"/>
+  </mask>
+  <circle cx="256" cy="256" r="164" fill="#000000" mask="url(#bolt-mask-light)"/>
+</svg>
