@@ -107,20 +107,22 @@ sequenceDiagram
 
 ## Quickstart
 
-Run directly using Bun or npx.
-
 ### Stdio mode (Default)
 
-Connect to a local Firecrawl instance running on port 3002:
+Connect to a local or remote Firecrawl instance. Run immediately without manual installation:
 
 ```bash
 export FIRECRAWL_API_URL="http://localhost:3002"
 
-# Run via npx
+# Run directly via npx
 npx voltcrawl
 
-# Or run via bun
+# Or run via bunx
 bunx voltcrawl
+
+# Or install globally
+npm install -g voltcrawl
+voltcrawl
 ```
 
 ### Streamable HTTP mode
@@ -130,10 +132,9 @@ Run as a standalone HTTP MCP service with token authentication:
 ```bash
 export MASTER_API_KEY="your-secret-master-token"
 export FIRECRAWL_API_URL="http://localhost:3002"
-export MCP_HTTP_PORT=8787
-export MCP_HTTP_HOST="127.0.0.1"
 
-npx voltcrawl --http
+# Launch HTTP server on port 8787
+npx voltcrawl --http --port 8787 --host 127.0.0.1
 ```
 
 Verify service readiness:
