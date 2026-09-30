@@ -127,9 +127,31 @@ async function dispatch(
   // Stream rather than buffer. Buffering would stall SSE responses, and the
   // transport reuses the Response for a JSON or event-stream body.
   for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
-    outgoing.write(chunk);
+    // write() returns false once the socket buffer is full. Ignoring that lets
+    // a slow client accumulate the whole stream in Node's memory, so wait for
+    // drain, and stop if the client hangs up mid-response.
+    if (!outgoing.write(chunk) && !(await waitForDrain(outgoing))) {
+      return;
+    }
   }
   outgoing.end();
+}
+
+function waitForDrain(outgoing: ServerResponse): Promise<boolean> {
+  return new Promise((resolve) => {
+    const done = (drained: boolean) => {
+      outgoing.off("drain", onDrain);
+      outgoing.off("close", onClose);
+      outgoing.off("error", onError);
+      resolve(drained);
+    };
+    const onDrain = () => done(true);
+    const onClose = () => done(false);
+    const onError = () => done(false);
+    outgoing.on("drain", onDrain);
+    outgoing.on("close", onClose);
+    outgoing.on("error", onError);
+  });
 }
 
 /** Cap on a single request body. Research args are small; anything larger is abuse. */
