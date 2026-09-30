@@ -321,7 +321,7 @@ bun install
 # Run static typecheck
 bun run typecheck
 
-# Run 10 offline test suites (144 tests)
+# Run 10 offline unit suites (144 tests, reported by bun test)
 bun test
 
 # Run stdio integration test

@@ -38,7 +38,7 @@
     "start": "bun run src/index.ts",
     "start:http": "bun run src/http.ts",
     "build": "bun build src/index.ts src/http.ts --outdir dist --target node",
-    "typecheck": "NODE_OPTIONS=--max-old-space-size=4096 tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "bun test && bun run tests/stdio-test.ts",
     "prepack": "bun run build"
   },

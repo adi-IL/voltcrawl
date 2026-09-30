@@ -50,7 +50,12 @@ async function main(): Promise<void> {
   // This server terminates no TLS. Caddy does, in front of it. The base URL is
   // only used to reconstruct an absolute request URL, so it must always be http
   // or a non-loopback bind produces an https:// URL the server cannot serve.
-  const baseUrl = `http://${hostname}:${port}`;
+  // IPv6 literals must be bracketed in a URL authority, so http://::1:8787 is
+  // invalid and every request 500s before routing.
+  const urlHost = hostname.includes(":") && !hostname.startsWith("[")
+    ? `[${hostname}]`
+    : hostname;
+  const baseUrl = `http://${urlHost}:${port}`;
 
   const server = createServer((incoming, outgoing) => {
     serveRequest(incoming, outgoing, baseUrl).catch((err: unknown) => {
