@@ -14,6 +14,42 @@ import {
   ToolErrorDetail,
 } from "./types.ts";
 
+/**
+ * Registers a tool without letting TypeScript infer the SDK's zod overloads.
+ * The scrape tool's schema is deep enough that inference exceeds the compiler's
+ * instantiation depth, which surfaced as TS2589 and was previously invisible
+ * because CI never ran tsc.
+ */
+function registerTool<Args>(
+  server: McpServer,
+  name: string,
+  description: string,
+  schema: Record<string, z.ZodTypeAny>,
+  handler: (args: Args) => Promise<ToolResult>,
+): void {
+  // The SDK's tool() overloads resolve zod schemas eagerly; calling through an
+  // untyped reference keeps that inference out of this call site.
+  const register = server.tool.bind(server) as (
+    n: string,
+    d: string,
+    s: unknown,
+    h: unknown,
+  ) => unknown;
+  register(name, description, schema, handler);
+}
+
+type TextContent = { type: "text"; text: string };
+type ToolResult = { content: TextContent[]; isError?: boolean };
+
+type ScrapeArgs = {
+  url: string;
+  formats?: string[];
+  onlyMainContent?: boolean;
+  waitFor?: number;
+  jsonPrompt?: string;
+  jsonSchema?: Record<string, unknown>;
+};
+
 export function classifyError(err: unknown, target?: string): ToolErrorDetail {
   const msg = err instanceof Error ? err.message : String(err);
   const lower = msg.toLowerCase();
@@ -62,20 +98,8 @@ function formatLinkItem(item: unknown): string {
   return JSON.stringify(item);
 }
 
-export function createVoltCrawlServer(
-  client: FirecrawlClient = new FirecrawlClient(),
-): McpServer {
-  const server = new McpServer({
-    name: "voltcrawl",
-    version: "1.0.0",
-  });
-
-  server.tool(
-    "volt_crawl_scrape",
-    "Scrape a webpage and convert it to clean markdown or structured JSON using headless Chromium",
-    ScrapeToolSchema as z.ZodRawShape,
-    async (args: { url: string; formats?: string[]; onlyMainContent?: boolean; waitFor?: number; jsonPrompt?: string; jsonSchema?: Record<string, unknown> }) => {
-      try {
+async function runScrape(client: FirecrawlClient, args: ScrapeArgs): Promise<ToolResult> {
+  try {
         const result = await client.scrape(args);
         const textParts: { type: "text"; text: string }[] = [];
         // 1. Extracted structured JSON first so large markdown does not truncate it
@@ -129,13 +153,29 @@ export function createVoltCrawlServer(
               ? textParts
               : [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
-      } catch (err) {
-        return formatErrorResponse("Scrape", classifyError(err, args.url));
-      }
-    },
+  } catch (err) {
+    return formatErrorResponse("Scrape", classifyError(err, args.url));
+  }
+}
+
+export function createVoltCrawlServer(
+  client: FirecrawlClient = new FirecrawlClient(),
+): McpServer {
+  const server = new McpServer({
+    name: "voltcrawl",
+    version: "1.0.0",
+  });
+
+  registerTool<ScrapeArgs>(
+    server,
+    "volt_crawl_scrape",
+    "Scrape a webpage and convert it to clean markdown or structured JSON using headless Chromium",
+    ScrapeToolSchema,
+    (args) => runScrape(client, args),
   );
 
-  server.tool(
+  registerTool<{ url: string; search?: string; limit?: number }>(
+    server,
     "volt_crawl_map",
     "Discover links from a sitemap when one exists. JS sites without a sitemap return zero links. Use crawl for those.",
     MapToolSchema,
@@ -177,7 +217,8 @@ export function createVoltCrawlServer(
     },
   );
 
-  server.tool(
+  registerTool<{ url: string; limit?: number; maxDiscoveryDepth?: number }>(
+    server,
     "volt_crawl_crawl",
     "Initiate an asynchronous recursive crawl of a website",
     CrawlToolSchema,
@@ -198,7 +239,8 @@ export function createVoltCrawlServer(
     },
   );
 
-  server.tool(
+  registerTool<{ query: string; numResults?: number }>(
+    server,
     "volt_crawl_search",
     "Web search via Google Search Grounding. Returns ranked URLs and snippets. Does not render pages. Use volt_crawl_scrape on a URL you want rendered.",
     SearchToolSchema,
@@ -214,7 +256,8 @@ export function createVoltCrawlServer(
     },
   );
 
-  server.tool(
+  registerTool<{ id?: string; includeDocs?: boolean; limitDocs?: number }>(
+    server,
     "volt_crawl_status",
     "Check crawl job progress or verify service readiness",
     StatusToolSchema,
@@ -267,10 +310,11 @@ export function createVoltCrawlServer(
     },
   );
 
-  server.tool(
+  registerTool<{ query: string; numResults?: number; scrapeTop?: number; waitFor?: number; mode?: "fast" | "survey"; maxExcerptChars?: number }>(
+    server,
     "volt_crawl_research",
     "Resolve vague research intent to rendered evidence in one call. Search Grounding discovers ranked candidates, but do not trust or cite search snippets — they are discovery signal only, not fact. Firecrawl renders the top hits and returns quoted lines with source URL, title, and status; cite only rendered evidence as the source of truth.",
-    ResearchToolSchema as z.ZodRawShape,
+    ResearchToolSchema,
     async (args) => {
       try {
         const text = await runResearch(client, {

@@ -42,6 +42,9 @@ jobs:
       - name: Run Unit Tests
         run: bun test
 
+      - name: Run Typecheck
+        run: bun run typecheck
+
       - name: Run Bun Stdio Integration Test
         run: bun run tests/stdio-test.ts
 
@@ -101,6 +104,38 @@ jobs:
 
       - name: Verify CLI Stdio Handshake with Node.js
         run: node bin/cli.js --help && node bin/cli.js --version
+
+      - name: Verify HTTP Transport Boots with Node.js
+        env:
+          MASTER_API_KEY: ci-smoke-test-key
+        run: |
+          MCP_HTTP_PORT=8791 node dist/http.js &
+          SERVER_PID=$!
+          for _ in $(seq 1 20); do
+            curl -sf http://127.0.0.1:8791/healthz >/dev/null && break
+            sleep 0.5
+          done
+          curl -sf http://127.0.0.1:8791/healthz
+          code=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://127.0.0.1:8791/mcp)
+          if [ "$code" != "401" ]; then
+            echo "Expected 401 for unauthenticated /mcp, got $code"
+            kill $SERVER_PID
+            exit 1
+          fi
+          kill $SERVER_PID
+
+      - name: Verify HTTP Transport Boots with Bun
+        env:
+          MASTER_API_KEY: ci-smoke-test-key
+        run: |
+          MCP_HTTP_PORT=8792 bun dist/http.js &
+          SERVER_PID=$!
+          for _ in $(seq 1 20); do
+            curl -sf http://127.0.0.1:8792/healthz >/dev/null && break
+            sleep 0.5
+          done
+          curl -sf http://127.0.0.1:8792/healthz
+          kill $SERVER_PID
 
       - name: Test Package Tarball Installation & Binary Execution
         run: |

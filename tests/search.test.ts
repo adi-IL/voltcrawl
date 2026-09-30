@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatSearchHits, parseSearchPayload, parseSearchPayload, searchGoogle } from "../src/search.ts";
+import { formatSearchHits, parseSearchPayload, searchGoogle } from "../src/search.ts";
 
 describe("parseSearchPayload", () => {
   test("returns empty list when results is missing", () => {
