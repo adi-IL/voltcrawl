@@ -360,10 +360,12 @@ export function researchMapTarget(
   const siteMatch = QUERY_SITE_PATTERN.exec(query);
   if (siteMatch !== null) {
     const token = siteMatch[1];
-    try {
-      return new URL(token.includes("://") ? token : `https://${token}`).origin;
-    } catch {
-      // fall through to top hit
+    if (token !== undefined) {
+      try {
+        return new URL(token.includes("://") ? token : `https://${token}`).origin;
+      } catch {
+        // fall through to top hit
+      }
     }
   }
 

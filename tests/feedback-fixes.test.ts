@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createVoltCrawledServer } from "../src/server.ts";
+import { createVoltCrawlServer } from "../src/server.ts";
 import type { FirecrawlClient } from "../src/client.ts";
 
 interface ToolHandlerResult {
@@ -34,15 +34,15 @@ describe("Feedback fixes validation", () => {
       }),
     } as unknown as FirecrawlClient;
 
-    const server = createVoltCrawledServer(mockClient);
+    const server = createVoltCrawlServer(mockClient);
     const handler = getToolHandler(server, "volt_crawl_scrape");
     const response = await handler({ url: "https://example.com" });
     const content = response.content;
 
     // Extracted structured JSON must be the first content part so large markdown cannot truncate it
-    expect(content[0].text).toContain("Extracted Structured Data");
-    expect(content[0].text).toContain('"product": "Transformer"');
-    expect(content[1].text).toContain("Scraped Content");
+    expect(content[0]!.text).toContain("Extracted Structured Data");
+    expect(content[0]!.text).toContain('"product": "Transformer"');
+    expect(content[1]!.text).toContain("Scraped Content");
   });
 
   test("Fix 2: html and rawHtml are included in scrape response when present", async () => {
@@ -57,7 +57,7 @@ describe("Feedback fixes validation", () => {
       }),
     } as unknown as FirecrawlClient;
 
-    const server = createVoltCrawledServer(mockClient);
+    const server = createVoltCrawlServer(mockClient);
     const handler = getToolHandler(server, "volt_crawl_scrape");
     const response = await handler({ url: "https://example.com", formats: ["html", "rawHtml"] });
     const fullText = response.content.map((c) => c.text).join("\n");
@@ -78,10 +78,10 @@ describe("Feedback fixes validation", () => {
       }),
     } as unknown as FirecrawlClient;
 
-    const server = createVoltCrawledServer(mockClient);
+    const server = createVoltCrawlServer(mockClient);
     const handler = getToolHandler(server, "volt_crawl_map");
     const response = await handler({ url: "https://example.com", search: "shoes" });
-    const text = response.content[0].text;
+    const text = response.content[0]!.text;
 
     expect(text).toContain("Total: 2");
     expect(text).toContain("https://example.com/shoes/running");
@@ -111,10 +111,10 @@ describe("Feedback fixes validation", () => {
       }),
     } as unknown as FirecrawlClient;
 
-    const server = createVoltCrawledServer(mockClient);
+    const server = createVoltCrawlServer(mockClient);
     const handler = getToolHandler(server, "volt_crawl_status");
     const response = await handler({ id: "crawl-123" });
-    const text = response.content[0].text;
+    const text = response.content[0]!.text;
 
     expect(text).toContain("Crawl Status (crawl-123)");
     expect(text).toContain("Scraped Documents (2 total, showing first 2)");
@@ -141,10 +141,10 @@ describe("Feedback fixes validation", () => {
       }),
     } as unknown as FirecrawlClient;
 
-    const server = createVoltCrawledServer(mockClient);
+    const server = createVoltCrawlServer(mockClient);
     const handler = getToolHandler(server, "volt_crawl_status");
     const response = await handler({ id: "crawl-123", includeDocs: false });
-    const text = response.content[0].text;
+    const text = response.content[0]!.text;
 
     expect(text).toContain("Crawl Status (crawl-123)");
     expect(text).not.toContain("Scraped Documents");

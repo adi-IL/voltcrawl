@@ -1,5 +1,5 @@
 /**
- * Firecrawl API client connecting to self-hosted Firecrawl on volt-rust.
+ * Firecrawl API client for a self-hosted Firecrawl instance.
  */
 
 export interface FirecrawlClientOptions {

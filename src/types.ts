@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const ScrapeToolSchema = {
+export const ScrapeToolSchema: Record<string, z.ZodTypeAny> = {
   url: z.string().url().describe("The URL of the webpage to scrape"),
   formats: z
     .array(z.enum(["markdown", "html", "rawHtml", "json"]))
@@ -30,25 +30,25 @@ export const ScrapeToolSchema = {
     .describe("Optional JSON Schema defining the exact shape of structured data to extract"),
 };
 
-export const MapToolSchema = {
+export const MapToolSchema: Record<string, z.ZodTypeAny> = {
   url: z.string().url().describe("Base domain URL to map via sitemap.xml. Use crawl for non-sitemap sites."),
   search: z.string().optional().describe("Optional search keyword to filter discovered URLs"),
   limit: z.number().int().min(1).max(1000).optional().default(50).describe("Maximum number of links to return (default: 50)"),
 };
 
-export const CrawlToolSchema = {
+export const CrawlToolSchema: Record<string, z.ZodTypeAny> = {
   url: z.string().url().describe("The starting URL for recursive crawling"),
   limit: z.number().int().min(1).max(500).optional().default(10).describe("Maximum pages to crawl (default: 10)"),
   maxDiscoveryDepth: z.number().int().min(1).max(10).optional().default(2).describe("Maximum link discovery depth (default: 2)"),
 };
 
-export const StatusToolSchema = {
+export const StatusToolSchema: Record<string, z.ZodTypeAny> = {
   id: z.string().optional().describe("Optional crawl job ID. If omitted, checks overall instance health and readiness"),
   includeDocs: z.boolean().optional().default(true).describe("Whether to include scraped documents for completed crawl jobs (default: true)"),
   limitDocs: z.number().int().min(1).max(50).optional().default(5).describe("Maximum number of scraped documents to return in status response (default: 5)"),
 };
 
-export const SearchToolSchema = {
+export const SearchToolSchema: Record<string, z.ZodTypeAny> = {
   query: z
     .string()
     .min(1)
@@ -63,7 +63,7 @@ export const SearchToolSchema = {
     .describe("Number of URLs to return (default 5, max 10)"),
 };
 
-export const ResearchToolSchema = {
+export const ResearchToolSchema: Record<string, z.ZodTypeAny> = {
   query: z
     .string()
     .min(1)

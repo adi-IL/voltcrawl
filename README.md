@@ -33,7 +33,7 @@ flowchart TD
 
     subgraph Upstream["Upstream Services"]
         SearchProxy["Search Grounding Proxy<br/>(Vertex ADC / Custom HTTP)"]
-        Firecrawl["Firecrawl Engine<br/>(Headless Chromium + NuQ)"]
+        Firecrawl["Firecrawl Engine<br/>(Headless Chromium + Crawl Queue)"]
     end
 
     OpenCode --> Stdio
@@ -72,7 +72,7 @@ voltcrawl uses Firecrawl as an honest operational engine for headless browser re
 - **Deterministic noise filtering:** Strips OneTrust dialogs, cookie banners, ad-block warnings, and navigation sidebars. Preserves author bylines, timestamps, code blocks, and data tables.
 - **Truth contract enforcement:** Separates search candidates from rendered evidence. Agents cite verified DOM output rather than search index snippets.
 - **Decoupled backends:** Connects to self-hosted Firecrawl instances on localhost or remote hosts. Pairs with Google Search Grounding via Vertex AI ADC, custom search proxies, or offline test doubles.
-- **Offline determinism:** Test suites run completely offline without cloud credentials or network connections.
+- **Offline determinism:** The 144 unit tests run completely offline with no cloud credentials or network access. The stdio integration test additionally probes a local Firecrawl instance and is the one test that expects a service on `http://localhost:3002`.
 
 ---
 
@@ -281,18 +281,20 @@ stateDiagram-v2
 voltcrawl eliminates installation friction for users and agents:
 
 ### When running via npx or bunx
-- Zero dependency installation. The package ships pre-bundled Node.js and Bun ECMAScript Module artifacts in `dist/`.
-- Executing `npx voltcrawl` or `bunx voltcrawl` runs immediately on any system with Node >= 20 or Bun installed.
+- Zero dependency installation. The package ships a pre-bundled JavaScript artifact per entrypoint in `dist/`, with dependencies inlined.
+- Executing `npx voltcrawl` or `bunx voltcrawl` runs immediately on any system with Node >= 20 or Bun installed. Both HTTP and stdio transports are verified on both runtimes in CI.
 
 ### When installed via npm
-Installing `voltcrawl` automatically pulls in two curated production dependencies:
-- **`@modelcontextprotocol/sdk` (`^1.6.1`):** The official Model Context Protocol TypeScript SDK implementing JSON-RPC 2.0 framing, `StdioServerTransport`, and `StreamableHTTPServerTransport`.
+Installing `voltcrawl` pulls in two production dependencies, which are also inlined into the published bundles:
+- **`@modelcontextprotocol/sdk` (`^1.6.1`):** The official Model Context Protocol TypeScript SDK implementing JSON-RPC 2.0 framing, `StdioServerTransport`, and `WebStandardStreamableHTTPServerTransport`.
 - **`zod` (`^3.24.2`):** Type-safe schema validation engine powering all six tool parameter contracts.
 
-### Configuration template
-A documented configuration template is included in [`.env.example`](.env.example):
+### Configuration
+voltcrawl reads configuration from the process environment. It does not load a `.env` file. For a local run:
+
 ```bash
-cp .env.example .env
+export FIRECRAWL_API_URL="http://localhost:3002"
+export SEARCH_PROXY_URL="http://localhost:8088"
 ```
 
 ---
@@ -303,9 +305,9 @@ cp .env.example .env
 |---|---|---|
 | `FIRECRAWL_API_URL` | `http://localhost:3002` | Upstream Firecrawl v2 REST endpoint |
 | `FIRECRAWL_API_KEY` | *(empty)* | Optional Bearer token for cloud or authenticated Firecrawl |
-| `SEARCH_PROXY_URL` | `http://localhost:8088` | Upstream search proxy endpoint for Google Search Grounding |
-| `MCP_HTTP_PORT` | `8787` | Port for Streamable HTTP transport |
-| `MCP_HTTP_HOST` | `127.0.0.1` | Host binding for HTTP transport |
+| `SEARCH_PROXY_URL` | `http://localhost:8088` | Upstream search proxy endpoint for Google Search Grounding. `VERTEX_PROXY_URL` is accepted as a legacy alias. |
+| `MCP_HTTP_PORT` | `8787` | Port for Streamable HTTP transport. `PORT` is accepted as a fallback. |
+| `MCP_HTTP_HOST` | `127.0.0.1` | Host binding for HTTP transport. `HOST` is accepted as a fallback. |
 | `MASTER_API_KEY` | *(empty)* | Enforced on HTTP transport; stdio transport is unauthenticated |
 
 ---
@@ -319,7 +321,7 @@ bun install
 # Run static typecheck
 bun run typecheck
 
-# Run 10 offline test suites (144 tests)
+# Run 10 offline unit suites (144 tests, reported by bun test)
 bun test
 
 # Run stdio integration test
@@ -328,6 +330,17 @@ bun run tests/stdio-test.ts
 # Build production bundle for Node.js
 bun run build
 ```
+
+---
+
+## Documentation
+
+Longer guides live in [`docs/`](docs/):
+
+- [Truth contract](docs/explanation/truth-contract.md) — why search snippets are never cited as evidence
+- [Configure self-hosted Firecrawl](docs/how-to/configure-self-hosted-firecrawl.md) — point voltcrawl at your own instance
+- [Tools reference](docs/reference/tools.md) — every tool, parameter, default, and range
+- [Quickstart](docs/tutorials/quickstart.md) — first verified research call
 
 ---
 

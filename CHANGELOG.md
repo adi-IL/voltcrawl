@@ -30,4 +30,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Structured error classification:
   - Explicit error codes: `RATE_LIMITED`, `BLOCKED`, `TIMEOUT`, `NOT_FOUND`, `NETWORK_ERROR`, and `UPSTREAM_ERROR`.
   - Machine-readable `retryable` flags and target URLs in error responses.
-- Comprehensive test suite running 100% offline without external network or credential dependencies.
+- Comprehensive test suite: 144 unit tests run fully offline; the stdio integration test probes a local Firecrawl instance.

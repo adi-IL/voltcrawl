@@ -63,7 +63,7 @@ describe("extractProofLines", () => {
   test("truncates long lines to quote budget", () => {
     const lines = extractProofLines("x".repeat(500), 1);
     expect(lines).toHaveLength(1);
-    expect(lines[0].length).toBe(300);
+    expect(lines[0]!.length).toBe(300);
   });
 });
 

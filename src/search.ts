@@ -1,10 +1,3 @@
-export class ExaKeyMissingError extends Error {
-  constructor() {
-    super("EXA_API_KEY is not set (deprecated: Google Search Grounding uses Vertex ADC)");
-    this.name = "ExaKeyMissingError";
-  }
-}
-
 export class SearchUnavailableError extends Error {
   constructor(message: string) {
     super(message);
@@ -67,14 +60,16 @@ export function parseSearchPayload(payload: unknown): readonly SearchHit[] {
   return hits;
 }
 
-export const parseExaSearch = parseSearchPayload;
-
 export async function searchGoogle(
   query: string,
   numResults: number,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<readonly SearchHit[]> {
-  const proxyUrl = (env.VERTEX_PROXY_URL || "http://127.0.0.1:8088").replace(/\/+$/, "");
+  const proxyUrl = (
+    env.SEARCH_PROXY_URL ||
+    env.VERTEX_PROXY_URL ||
+    "http://localhost:8088"
+  ).replace(/\/+$/, "");
   const capped =
     numResults < 1 ? 1 : numResults > 10 ? 10 : Math.floor(numResults);
   const response = await fetch(`${proxyUrl}/v1/search`, {
@@ -107,8 +102,6 @@ export async function searchGoogle(
   }
   return parseSearchPayload(payload);
 }
-
-export const searchExa = searchGoogle;
 
 export function formatSearchHits(
   query: string,
