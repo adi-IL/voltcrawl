@@ -47,10 +47,23 @@ async function main(): Promise<void> {
 
   const port = Number(process.env.MCP_HTTP_PORT ?? process.env.PORT ?? "8787");
   const hostname = process.env.MCP_HTTP_HOST ?? process.env.HOST ?? "127.0.0.1";
-  const scheme = hostname === "127.0.0.1" || hostname === "::1" || hostname === "localhost" ? "http" : "https";
+  // This server terminates no TLS. Caddy does, in front of it. The base URL is
+  // only used to reconstruct an absolute request URL, so it must always be http
+  // or a non-loopback bind produces an https:// URL the server cannot serve.
+  const baseUrl = `http://${hostname}:${port}`;
 
   const server = createServer((incoming, outgoing) => {
-    void serveRequest(incoming, outgoing, `${scheme}://${hostname}:${port}`);
+    serveRequest(incoming, outgoing, baseUrl).catch((err: unknown) => {
+      // An unhandled rejection here would take the process down, and the only
+      // sanctioned way to stop this service is systemctl restart.
+      console.error("Unhandled error in HTTP request listener:", err);
+      if (!outgoing.headersSent) {
+        outgoing.writeHead(500, { "Content-Type": "text/plain" });
+        outgoing.end("Internal Server Error");
+        return;
+      }
+      outgoing.destroy(err instanceof Error ? err : new Error(String(err)));
+    });
   });
   server.listen(port, hostname, () => {
     console.error(`voltcrawl HTTP MCP listening on ${hostname}:${port}`);
@@ -73,6 +86,24 @@ async function serveRequest(
   outgoing: ServerResponse,
   baseUrl: string,
 ): Promise<void> {
+  try {
+    await dispatch(incoming, outgoing, baseUrl);
+  } catch (err) {
+    // An oversized or malformed body must not reach the transport.
+    if (err instanceof PayloadTooLargeError && !outgoing.headersSent) {
+      outgoing.writeHead(err.status, { "Content-Type": "text/plain" });
+      outgoing.end("Payload Too Large");
+      return;
+    }
+    throw err;
+  }
+}
+
+async function dispatch(
+  incoming: IncomingMessage,
+  outgoing: ServerResponse,
+  baseUrl: string,
+): Promise<void> {
   const body =
     incoming.method === "GET" || incoming.method === "HEAD"
       ? undefined
@@ -88,15 +119,41 @@ async function serveRequest(
     outgoing.end();
     return;
   }
-  outgoing.end(Buffer.from(await response.arrayBuffer()));
+  // Stream rather than buffer. Buffering would stall SSE responses, and the
+  // transport reuses the Response for a JSON or event-stream body.
+  for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
+    outgoing.write(chunk);
+  }
+  outgoing.end();
 }
 
+/** Cap on a single request body. Research args are small; anything larger is abuse. */
+const MAX_BODY_BYTES = 10 * 1024 * 1024;
+
 async function readBody(incoming: IncomingMessage): Promise<Buffer> {
+  const declared = Number(incoming.headers["content-length"]);
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
+    throw new PayloadTooLargeError(declared);
+  }
   const chunks: Buffer[] = [];
+  let total = 0;
   for await (const chunk of incoming) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string);
+    total += buf.length;
+    if (total > MAX_BODY_BYTES) {
+      throw new PayloadTooLargeError(total);
+    }
+    chunks.push(buf);
   }
   return Buffer.concat(chunks);
+}
+
+class PayloadTooLargeError extends Error {
+  readonly status = 413;
+  constructor(readonly bytes: number) {
+    super(`Request body of ${bytes} bytes exceeds the ${MAX_BODY_BYTES} byte limit`);
+    this.name = "PayloadTooLargeError";
+  }
 }
 
 main().catch((err) => {
