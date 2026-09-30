@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { z } from "zod";
 import { FirecrawlClient } from "./client.ts";
 import { runResearch } from "./research.ts";
 import { formatSearchHits, searchGoogle } from "./search.ts";
@@ -61,7 +62,7 @@ function formatLinkItem(item: unknown): string {
   return JSON.stringify(item);
 }
 
-export function createVoltCrawledServer(
+export function createVoltCrawlServer(
   client: FirecrawlClient = new FirecrawlClient(),
 ): McpServer {
   const server = new McpServer({
@@ -72,8 +73,8 @@ export function createVoltCrawledServer(
   server.tool(
     "volt_crawl_scrape",
     "Scrape a webpage and convert it to clean markdown or structured JSON using headless Chromium",
-    ScrapeToolSchema,
-    async (args) => {
+    ScrapeToolSchema as z.ZodRawShape,
+    async (args: { url: string; formats?: string[]; onlyMainContent?: boolean; waitFor?: number; jsonPrompt?: string; jsonSchema?: Record<string, unknown> }) => {
       try {
         const result = await client.scrape(args);
         const textParts: { type: "text"; text: string }[] = [];
@@ -268,8 +269,8 @@ export function createVoltCrawledServer(
 
   server.tool(
     "volt_crawl_research",
-    "Resolve vague research intent to rendered evidence in one call. Exa discovers ranked candidates, but do not trust or cite search snippets — they are discovery signal only, not fact. Firecrawl renders the top hits and returns quoted lines with source URL, title, and status; cite only rendered evidence as the source of truth.",
-    ResearchToolSchema,
+    "Resolve vague research intent to rendered evidence in one call. Search Grounding discovers ranked candidates, but do not trust or cite search snippets — they are discovery signal only, not fact. Firecrawl renders the top hits and returns quoted lines with source URL, title, and status; cite only rendered evidence as the source of truth.",
+    ResearchToolSchema as z.ZodRawShape,
     async (args) => {
       try {
         const text = await runResearch(client, {

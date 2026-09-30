@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { formatSearchHits, parseExaSearch, parseSearchPayload, searchGoogle } from "../src/search.ts";
+import { formatSearchHits, parseSearchPayload, parseSearchPayload, searchGoogle } from "../src/search.ts";
 
-describe("parseExaSearch", () => {
+describe("parseSearchPayload", () => {
   test("returns empty list when results is missing", () => {
-    expect(parseExaSearch({})).toEqual([]);
+    expect(parseSearchPayload({})).toEqual([]);
   });
 
   test("skips hits without a url", () => {
     expect(
-      parseExaSearch({
+      parseSearchPayload({
         results: [{ title: "no url" }, { url: "https://a.example", title: "A" }],
       }),
     ).toEqual([{ url: "https://a.example", title: "A", snippet: "" }]);
@@ -16,7 +16,7 @@ describe("parseExaSearch", () => {
 
   test("uses first highlight as snippet", () => {
     expect(
-      parseExaSearch({
+      parseSearchPayload({
         results: [
           {
             url: "https://quotes.toscrape.com/js/",
@@ -37,7 +37,7 @@ describe("parseExaSearch", () => {
 
   test("falls back to text when highlights are empty", () => {
     expect(
-      parseExaSearch({
+      parseSearchPayload({
         results: [
           {
             url: "https://b.example",

@@ -8,7 +8,7 @@ import {
   MasterKeyMissingError,
   requireMasterKey,
 } from "./auth.ts";
-import { createVoltCrawledServer } from "./server.ts";
+import { createVoltCrawlServer } from "./server.ts";
 
 function unauthorized(): Response {
   return new Response("unauthorized", {
@@ -25,7 +25,7 @@ async function handleMcp(request: Request): Promise<Response> {
     return unauthorized();
   }
 
-  const server = createVoltCrawledServer();
+  const server = createVoltCrawlServer();
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,

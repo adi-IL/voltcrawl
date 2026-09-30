@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { createVoltCrawledServer } from "../src/server.ts";
+import { createVoltCrawlServer } from "../src/server.ts";
 import { FirecrawlClient } from "../src/client.ts";
 
-describe("createVoltCrawledServer error classification", () => {
+describe("createVoltCrawlServer error classification", () => {
   test("classifies rate limit error as RATE_LIMITED and retryable", async () => {
     const mockClient = {
       scrape: async () => {
@@ -10,7 +10,7 @@ describe("createVoltCrawledServer error classification", () => {
       },
     } as unknown as FirecrawlClient;
 
-    const server = createVoltCrawledServer(mockClient);
+    const server = createVoltCrawlServer(mockClient);
     expect(server).toBeDefined();
   });
 });

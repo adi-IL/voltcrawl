@@ -20,7 +20,7 @@ import {
   type ResearchEvidence,
   type ResearchMapFn,
 } from "../src/research.ts";
-import { parseExaSearch, type SearchHit } from "../src/search.ts";
+import { parseSearchPayload, type SearchHit } from "../src/search.ts";
 import type { FirecrawlClient } from "../src/client.ts";
 
 describe("Layer 1: Auth Boundary (Adversarial)", () => {
@@ -374,8 +374,8 @@ describe("Layer 3: Search / Normalization", () => {
     });
   });
 
-  describe("Exa search hit normalization", () => {
-    test("parseExaSearch handles highlights vs text vs snippet and malformed inputs", () => {
+  describe("search hit normalization", () => {
+    test("parseSearchPayload handles highlights vs text vs snippet and malformed inputs", () => {
       const payload = {
         results: [
           {
@@ -395,7 +395,7 @@ describe("Layer 3: Search / Normalization", () => {
         ],
       };
 
-      const hits = parseExaSearch(payload);
+      const hits = parseSearchPayload(payload);
       expect(hits.length).toBe(3);
       expect(hits[0]).toEqual({
         url: "https://exa.example/1",
@@ -414,11 +414,11 @@ describe("Layer 3: Search / Normalization", () => {
       });
     });
 
-    test("parseExaSearch safely returns empty array on null or non-object payloads", () => {
-      expect(parseExaSearch(null)).toEqual([]);
-      expect(parseExaSearch(undefined)).toEqual([]);
-      expect(parseExaSearch([])).toEqual([]);
-      expect(parseExaSearch({ results: "not array" })).toEqual([]);
+    test("parseSearchPayload safely returns empty array on null or non-object payloads", () => {
+      expect(parseSearchPayload(null)).toEqual([]);
+      expect(parseSearchPayload(undefined)).toEqual([]);
+      expect(parseSearchPayload([])).toEqual([]);
+      expect(parseSearchPayload({ results: "not array" })).toEqual([]);
     });
   });
 });
