@@ -75,12 +75,16 @@ async function main(): Promise<void> {
   });
 }
 
+function isMcpPath(pathname: string): boolean {
+  return pathname === "/mcp" || pathname.startsWith("/mcp/");
+}
+
 async function route(request: Request): Promise<Response> {
   const url = new URL(request.url);
   if (url.pathname === "/healthz") {
     return new Response("ok", { status: 200 });
   }
-  if (url.pathname === "/mcp" || url.pathname.startsWith("/mcp/")) {
+  if (isMcpPath(url.pathname)) {
     return handleMcp(request);
   }
   return new Response("not found", { status: 404 });
@@ -104,16 +108,33 @@ async function serveRequest(
   }
 }
 
+/**
+ * Header-only master key check. It runs before any request body is read so an
+ * unauthenticated caller cannot learn the body limit from a 413, and a body the
+ * caller is not allowed to send is never consumed.
+ */
+function isAuthorized(incoming: IncomingMessage): boolean {
+  const headers = new Headers(incoming.headers as Record<string, string>);
+  return authorize(extractPresentedKey(headers), requireMasterKey()).ok;
+}
+
 async function dispatch(
   incoming: IncomingMessage,
   outgoing: ServerResponse,
   baseUrl: string,
 ): Promise<void> {
+  const url = new URL(incoming.url ?? "/", baseUrl);
+  if (isMcpPath(url.pathname) && !isAuthorized(incoming)) {
+    const denial = unauthorized();
+    outgoing.writeHead(denial.status, Object.fromEntries(denial.headers));
+    outgoing.end(await denial.text());
+    return;
+  }
   const body =
     incoming.method === "GET" || incoming.method === "HEAD"
       ? undefined
       : await readBody(incoming);
-  const request = new Request(new URL(incoming.url ?? "/", baseUrl).toString(), {
+  const request = new Request(url.toString(), {
     method: incoming.method,
     headers: incoming.headers as Record<string, string>,
     ...(body === undefined ? {} : { body }),
