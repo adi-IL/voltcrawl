@@ -75,8 +75,8 @@ describe("research stress", () => {
     expect(candidateCount(pack)).toBe(2);
     expect(evidenceCount(pack)).toBe(2);
     expect(pack.match(/Scrape failed: boom/g)?.length).toBe(2);
-    expect(pack.match(/redirect no/g)?.length).toBe(2);
-    expect(pack.match(/status unknown/g)?.length).toBe(2);
+    expect(pack.match(/- Provenance: redirect no/g)?.length).toBe(2);
+    expect(pack.match(/- Status: unknown/g)?.length).toBe(2);
     for (const h of hits) {
       const failed = buildFailedEvidence(h.url, h.title, "boom");
       expect(failed.redirected).toBe(false);
@@ -100,9 +100,8 @@ describe("research stress", () => {
     expect(candidateCount(pack)).toBe(1);
     expect(evidenceCount(pack)).toBe(1);
     expect(pack).toContain(`- Source: ${final}`);
-    expect(pack).toContain(
-      `- Provenance: final URL ${final}, redirect yes, status 200`,
-    );
+    expect(pack).toContain("- Status: 200");
+    expect(pack).toContain("- Provenance: redirect yes");
     const direct = buildEvidence({
       url: final,
       title: "Final Page",

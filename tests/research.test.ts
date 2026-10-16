@@ -202,7 +202,7 @@ describe("provenance", () => {
     expect(evidence.mismatch).toBe(true);
   });
 
-  test("pack appends provenance lines without renaming existing sections", () => {
+  test("pack renders collapsed provenance beside the source and status lines", () => {
     const pack = formatResearchPack(
       "provenance",
       [{ url: "https://short.example/abc", title: "A", snippet: "s" }],
@@ -227,12 +227,11 @@ describe("provenance", () => {
     );
     expect(pack).toContain("- Source: https://final.example/page");
     expect(pack).toContain("- Status: 200");
-    expect(pack).toContain(
-      "- Provenance: final URL https://final.example/page, redirect yes, status 200",
-    );
-    expect(pack).toContain(
-      "- Provenance: final URL https://plain.example/, redirect no, status 404",
-    );
+    expect(pack).toContain("- Provenance: redirect yes");
+    expect(pack).toContain("- Source: https://plain.example/");
+    expect(pack).toContain("- Status: 404");
+    expect(pack).toContain("- Provenance: redirect no");
+    expect(pack).not.toContain("final URL");
   });
 });
 

@@ -468,7 +468,7 @@ export function formatResearchPack(
     }
     sections.push(
       ...header,
-      `- Provenance: final URL ${evidence.url}, redirect ${redirected ? "yes" : "no"}, status ${status}`,
+      `- Provenance: redirect ${redirected ? "yes" : "no"}`,
       "",
       evidence.excerpt,
       "",

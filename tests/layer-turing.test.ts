@@ -622,7 +622,7 @@ describe("Layer 5: Provenance / Evidence Integrity", () => {
   });
 
   describe("provenance rendering in formatted pack", () => {
-    test("renders final URL, redirect status, and HTTP status explicitly in pack", () => {
+    test("renders collapsed redirect provenance beside source and status in pack", () => {
       const hits: SearchHit[] = [
         {
           url: "https://redirect.origin/short",
@@ -646,9 +646,8 @@ describe("Layer 5: Provenance / Evidence Integrity", () => {
       const pack = formatResearchPack("provenance query", hits, evidences);
       expect(pack).toContain("- Source: https://redirect.dest/destination-article");
       expect(pack).toContain("- Status: 200");
-      expect(pack).toContain(
-        "- Provenance: final URL https://redirect.dest/destination-article, redirect yes, status 200",
-      );
+      expect(pack).toContain("- Provenance: redirect yes");
+      expect(pack).not.toContain("final URL");
       expect(pack).toContain("Destination rendered excerpt.");
       expect(pack).toContain("> Rendered quote line");
     });
@@ -817,13 +816,14 @@ describe("Layer 6: Orchestration / Research Mode", () => {
       expect(sec3Index).toBeGreaterThan(sec2Index);
 
       expect(pack).toContain("Successful content for hit 1");
-      expect(pack).toContain("- Provenance: final URL https://test.example/hit1, redirect no, status 200");
+      expect(pack).toContain("- Provenance: redirect no");
 
       expect(pack).toContain("Scrape failed: Cloudflare challenge failed on hit 2");
-      expect(pack).toContain("- Provenance: final URL https://test.example/hit2, redirect no, status unknown");
+      expect(pack).toContain("- Status: unknown");
+      expect(pack).toContain("- Provenance: redirect no");
 
       expect(pack).toContain("Successful content for hit 3");
-      expect(pack).toContain("- Provenance: final URL https://test.example/hit3, redirect no, status 200");
+      expect(pack).toContain("- Provenance: redirect no");
     });
   });
 });
