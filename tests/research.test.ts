@@ -143,6 +143,59 @@ describe("formatResearchPack", () => {
     expect(pack).toContain("Rendered evidence (source of truth");
     expect(pack).toContain("trust and cite only this section");
   });
+  test("renders the mismatch line directly after status when mismatch is true", () => {
+    const pack = formatResearchPack(
+      "broken render",
+      [{ url: "https://gone.example/404", title: "Gone", snippet: "s" }],
+      [
+        {
+          url: "https://gone.example/404",
+          title: "Gone",
+          status: 404,
+          excerpt: "missing",
+          quotes: [],
+          mismatch: true,
+        },
+      ],
+    );
+    const lines = pack.split("\n");
+    const statusIndex = lines.indexOf("- Status: 404");
+    expect(statusIndex).toBeGreaterThan(-1);
+    expect(lines[statusIndex + 1]).toBe(
+      "- Render: mismatch (empty title or non-200 status)",
+    );
+    expect(pack.match(/- Render: mismatch/g)?.length).toBe(1);
+  });
+
+  test("omits the mismatch line when mismatch is false or omitted", () => {
+    const pack = formatResearchPack(
+      "clean render",
+      [
+        { url: "https://a.example/ok", title: "Ok", snippet: "s" },
+        { url: "https://b.example/ok", title: "B", snippet: "s" },
+      ],
+      [
+        {
+          url: "https://a.example/ok",
+          title: "Ok",
+          status: 200,
+          excerpt: "rendered body",
+          quotes: ["quoted line"],
+          mismatch: false,
+        },
+        {
+          url: "https://b.example/ok",
+          title: "B",
+          status: 200,
+          excerpt: "rendered body",
+          quotes: ["quoted line"],
+        },
+      ],
+    );
+    expect(pack.match(/- Status: 200/g)?.length).toBe(2);
+    expect(pack).not.toContain("- Render: mismatch");
+  });
+
   test("empty hits yield no-results pack", () => {
     expect(formatResearchPack("q", [], [])).toContain("No results.");
   });
