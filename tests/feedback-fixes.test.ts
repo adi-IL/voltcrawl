@@ -1,25 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createVoltCrawlServer } from "../src/server.ts";
 import type { FirecrawlClient } from "../src/client.ts";
-
-interface ToolHandlerResult {
-  content: Array<{ type: string; text: string }>;
-}
-
-type ToolHandler = (args: Record<string, unknown>) => Promise<ToolHandlerResult>;
-
-interface McpServerInternal {
-  _registeredTools?: Record<string, { handler: ToolHandler }>;
-}
-
-function getToolHandler(server: unknown, name: string): ToolHandler {
-  const internal = server as McpServerInternal;
-  const tool = internal._registeredTools?.[name];
-  if (!tool) {
-    throw new Error(`Tool ${name} not registered on server`);
-  }
-  return tool.handler;
-}
 
 describe("Feedback fixes validation", () => {
   test("Fix 1: Extracted JSON is placed BEFORE markdown to prevent truncation", async () => {
@@ -35,14 +18,19 @@ describe("Feedback fixes validation", () => {
     } as unknown as FirecrawlClient;
 
     const server = createVoltCrawlServer(mockClient);
-    const handler = getToolHandler(server, "volt_crawl_scrape");
-    const response = await handler({ url: "https://example.com" });
-    const content = response.content;
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    const client = new Client({ name: "test-client", version: "1.0.0" });
+    await client.connect(clientTransport);
+    const response = await client.callTool({ name: "volt_crawl_scrape", arguments: { url: "https://example.com" } });
+    const content = response.content as Array<{ type: string; text: string }>;
 
     // Extracted structured JSON must be the first content part so large markdown cannot truncate it
     expect(content[0]!.text).toContain("Extracted Structured Data");
     expect(content[0]!.text).toContain('"product": "Transformer"');
     expect(content[1]!.text).toContain("Scraped Content");
+    await client.close();
+    await server.close();
   });
 
   test("Fix 2: html and rawHtml are included in scrape response when present", async () => {
@@ -58,12 +46,21 @@ describe("Feedback fixes validation", () => {
     } as unknown as FirecrawlClient;
 
     const server = createVoltCrawlServer(mockClient);
-    const handler = getToolHandler(server, "volt_crawl_scrape");
-    const response = await handler({ url: "https://example.com", formats: ["html", "rawHtml"] });
-    const fullText = response.content.map((c) => c.text).join("\n");
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    const client = new Client({ name: "test-client", version: "1.0.0" });
+    await client.connect(clientTransport);
+    const response = await client.callTool({
+      name: "volt_crawl_scrape",
+      arguments: { url: "https://example.com", formats: ["html", "rawHtml"] },
+    });
+    const content = response.content as Array<{ type: string; text: string }>;
+    const fullText = content.map((c) => c.text).join("\n");
 
     expect(fullText).toContain("Real HTML Content");
     expect(fullText).toContain("Raw HTML Content");
+    await client.close();
+    await server.close();
   });
 
   test("Fix 3: search parameter in map filters returned links correctly", async () => {
@@ -79,14 +76,20 @@ describe("Feedback fixes validation", () => {
     } as unknown as FirecrawlClient;
 
     const server = createVoltCrawlServer(mockClient);
-    const handler = getToolHandler(server, "volt_crawl_map");
-    const response = await handler({ url: "https://example.com", search: "shoes" });
-    const text = response.content[0]!.text;
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    const client = new Client({ name: "test-client", version: "1.0.0" });
+    await client.connect(clientTransport);
+    const response = await client.callTool({ name: "volt_crawl_map", arguments: { url: "https://example.com", search: "shoes" } });
+    const content = response.content as Array<{ type: string; text: string }>;
+    const text = content[0]!.text;
 
     expect(text).toContain("Total: 2");
     expect(text).toContain("https://example.com/shoes/running");
     expect(text).toContain("https://example.com/shoes/basketball");
     expect(text).not.toContain("https://example.com/apparel/shirts");
+    await client.close();
+    await server.close();
   });
 
   test("Fix 4: crawl status retrieves and formats completed crawl documents", async () => {
@@ -112,9 +115,13 @@ describe("Feedback fixes validation", () => {
     } as unknown as FirecrawlClient;
 
     const server = createVoltCrawlServer(mockClient);
-    const handler = getToolHandler(server, "volt_crawl_status");
-    const response = await handler({ id: "crawl-123" });
-    const text = response.content[0]!.text;
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    const client = new Client({ name: "test-client", version: "1.0.0" });
+    await client.connect(clientTransport);
+    const response = await client.callTool({ name: "volt_crawl_status", arguments: { id: "crawl-123" } });
+    const content = response.content as Array<{ type: string; text: string }>;
+    const text = content[0]!.text;
 
     expect(text).toContain("Crawl Status (crawl-123)");
     expect(text).toContain("Scraped Documents (2 total, showing first 2)");
@@ -122,6 +129,8 @@ describe("Feedback fixes validation", () => {
     expect(text).toContain("https://example.com/page1");
     expect(text).toContain("Full article body here.");
     expect(text).toContain("Page 2 Title");
+    await client.close();
+    await server.close();
   });
 
   test("Fix 4b: crawl status can skip docs when includeDocs is false", async () => {
@@ -142,11 +151,17 @@ describe("Feedback fixes validation", () => {
     } as unknown as FirecrawlClient;
 
     const server = createVoltCrawlServer(mockClient);
-    const handler = getToolHandler(server, "volt_crawl_status");
-    const response = await handler({ id: "crawl-123", includeDocs: false });
-    const text = response.content[0]!.text;
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    const client = new Client({ name: "test-client", version: "1.0.0" });
+    await client.connect(clientTransport);
+    const response = await client.callTool({ name: "volt_crawl_status", arguments: { id: "crawl-123", includeDocs: false } });
+    const content = response.content as Array<{ type: string; text: string }>;
+    const text = content[0]!.text;
 
     expect(text).toContain("Crawl Status (crawl-123)");
     expect(text).not.toContain("Scraped Documents");
+    await client.close();
+    await server.close();
   });
 });
