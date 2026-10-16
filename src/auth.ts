@@ -21,10 +21,19 @@ export function requireMasterKey(
   return key;
 }
 
+/**
+ * RFC 7235 makes the auth scheme case-insensitive, and one or more spaces or
+ * tabs may separate it from the token. The token itself is returned unchanged.
+ */
+const BEARER_PATTERN = /^Bearer[ \t]+(.+)$/i;
+
 export function extractPresentedKey(headers: Headers): string | undefined {
   const authorization = headers.get("authorization");
-  if (authorization?.startsWith("Bearer ")) {
-    return authorization.slice("Bearer ".length);
+  if (authorization !== null) {
+    const match = BEARER_PATTERN.exec(authorization);
+    if (match !== null) {
+      return match[1];
+    }
   }
   const apiKey = headers.get("x-api-key");
   if (apiKey !== null && apiKey.length > 0) {

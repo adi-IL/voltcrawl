@@ -120,15 +120,20 @@ describe("Layer 1: Auth Boundary (Adversarial)", () => {
       expect(extractPresentedKey(headers)).toBe("primary-bearer-token");
     });
 
-    test("strictly enforces 'Bearer ' scheme prefix casing", () => {
-      const lowerBearer = new Headers({ authorization: "bearer lowercase-scheme" });
-      expect(extractPresentedKey(lowerBearer)).toBeUndefined();
+    test("accepts any casing of the Bearer scheme", () => {
+      expect(
+        extractPresentedKey(new Headers({ authorization: "bearer lowercase-scheme" })),
+      ).toBe("lowercase-scheme");
+      expect(
+        extractPresentedKey(new Headers({ authorization: "BEARER uppercase-scheme" })),
+      ).toBe("uppercase-scheme");
 
+      // A valid Bearer scheme still wins over x-api-key whatever its casing.
       const withFallback = new Headers({
         authorization: "bearer lowercase-scheme",
         "x-api-key": "fallback-key",
       });
-      expect(extractPresentedKey(withFallback)).toBe("fallback-key");
+      expect(extractPresentedKey(withFallback)).toBe("lowercase-scheme");
     });
   });
 
