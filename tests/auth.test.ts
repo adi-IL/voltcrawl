@@ -22,8 +22,38 @@ describe("extractPresentedKey", () => {
     expect(extractPresentedKey(headers)).toBe("abc");
   });
 
+  test("accepts a lowercase bearer scheme", () => {
+    const headers = new Headers({ authorization: "bearer abc" });
+    expect(extractPresentedKey(headers)).toBe("abc");
+  });
+
+  test("accepts an uppercase bearer scheme", () => {
+    const headers = new Headers({ authorization: "BEARER abc" });
+    expect(extractPresentedKey(headers)).toBe("abc");
+  });
+
+  test("accepts multiple spaces or a tab after the scheme", () => {
+    const headers = new Headers({ authorization: "Bearer \tabc" });
+    expect(extractPresentedKey(headers)).toBe("abc");
+  });
+
+  test("rejects a token glued to the scheme", () => {
+    const headers = new Headers({ authorization: "bearerx abc" });
+    expect(extractPresentedKey(headers)).toBeUndefined();
+  });
+
+  test("rejects a bare Bearer with no token", () => {
+    const headers = new Headers({ authorization: "Bearer" });
+    expect(extractPresentedKey(headers)).toBeUndefined();
+  });
+
   test("reads x-api-key", () => {
     const headers = new Headers({ "x-api-key": "abc" });
+    expect(extractPresentedKey(headers)).toBe("abc");
+  });
+
+  test("falls back to x-api-key when Authorization is not a Bearer scheme", () => {
+    const headers = new Headers({ authorization: "Basic abc", "x-api-key": "abc" });
     expect(extractPresentedKey(headers)).toBe("abc");
   });
 
