@@ -38,7 +38,7 @@ export type ResearchEvidence = {
   readonly requestedUrl?: string;
   /** True when final sourceURL differs from the requested hit URL. */
   readonly redirected?: boolean;
-  /** True when rendered title was empty or status is non-200. */
+  /** True when rendered title was empty or status is non-200; rendered as a Render: mismatch line. */
   readonly mismatch?: boolean;
 };
 
@@ -458,10 +458,16 @@ export function formatResearchPack(
       evidence.quotes.length > 0
         ? evidence.quotes.map((line) => `> ${line}`).join("\n")
         : "> (no quoted lines)";
-    sections.push(
+    const header = [
       `## ${index + 1}. ${evidence.title}`,
       `- Source: ${evidence.url}`,
       `- Status: ${status}`,
+    ];
+    if (evidence.mismatch) {
+      header.push("- Render: mismatch (empty title or non-200 status)");
+    }
+    sections.push(
+      ...header,
       `- Provenance: final URL ${evidence.url}, redirect ${redirected ? "yes" : "no"}, status ${status}`,
       "",
       evidence.excerpt,
