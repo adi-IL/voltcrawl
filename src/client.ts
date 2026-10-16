@@ -30,6 +30,22 @@ export class FirecrawlClient {
     return headers;
   }
 
+  /**
+   * Firecrawl failures can arrive as an HTML gateway page rather than JSON.
+   * Read the body as text first, so the caller sees the body instead of a
+   * JSON.parse "Unexpected token <".
+   */
+  private async parseJsonResponse(resp: Response): Promise<any> {
+    const bodyText = await resp.text();
+    try {
+      return JSON.parse(bodyText);
+    } catch {
+      throw new Error(
+        `Invalid JSON response from Firecrawl (HTTP ${resp.status}): ${bodyText.slice(0, 200)}`,
+      );
+    }
+  }
+
   async checkHealth(): Promise<{ status: string; url: string; ready: boolean }> {
     try {
       const resp = await fetch(`${this.baseUrl}/v0/health/readiness`, {
@@ -113,7 +129,7 @@ export class FirecrawlClient {
       signal: AbortSignal.timeout(this.timeoutMs),
     });
 
-    const data = (await resp.json()) as any;
+    const data = (await this.parseJsonResponse(resp)) as any;
     if (!resp.ok || !data.success) {
       throw new Error(data.error || `Firecrawl map failed with HTTP ${resp.status}`);
     }
@@ -138,7 +154,7 @@ export class FirecrawlClient {
       signal: AbortSignal.timeout(this.timeoutMs),
     });
 
-    const data = (await resp.json()) as any;
+    const data = (await this.parseJsonResponse(resp)) as any;
     if (!resp.ok || !data.success) {
       throw new Error(data.error || `Firecrawl crawl failed with HTTP ${resp.status}`);
     }
@@ -151,7 +167,7 @@ export class FirecrawlClient {
       signal: AbortSignal.timeout(10000),
     });
 
-    const data = (await resp.json()) as any;
+    const data = (await this.parseJsonResponse(resp)) as any;
     if (!resp.ok || !data.success) {
       throw new Error(data.error || `Firecrawl status query failed with HTTP ${resp.status}`);
     }
